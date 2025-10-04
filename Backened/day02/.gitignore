@@ -1,0 +1,7 @@
+
+# add node_mododules
+node_mododules
+
+# add .env files
+*.env
+
