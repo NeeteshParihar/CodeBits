@@ -1,6 +1,7 @@
 import express from  'express';
 import { register, login, logout, profile } from '../Controllers/userAuth.js';
 import { validateUSerData } from '../utils/validator.js';
+import { checkUserAuthentication } from '../middlewares/userAuthentication.js';
 
 
 const authRouter = express.Router();
@@ -10,8 +11,8 @@ const authRouter = express.Router();
 
 authRouter.post('/register',validateUSerData(['firstName', 'emailId', 'password']),  register);
 authRouter.post('/login', validateUSerData(['emailId', 'password']),  login);
-authRouter.post('/logout', logout);
-authRouter.get('/profile', profile);
+authRouter.post('/logout',checkUserAuthentication, logout);
+authRouter.get('/profile',checkUserAuthentication, profile);
 
 export default authRouter;
 

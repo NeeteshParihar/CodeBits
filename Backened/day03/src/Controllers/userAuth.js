@@ -132,20 +132,26 @@ export const logout = async (req, res) => {
 
     try {    
 
-        const jwtToken = req.cookies? req.cookies.jwtToken:undefined ;        
+        
 
-        const payload = jwt.verify(jwtToken, server_private_key); // we have used verify here because the data should be verified and its origin should be checked with digital signature
+        // the middle ware will make sure user is authenticated and loged in
+        const user = req.user;
 
-        const emailId = payload.emailId;
-        const exp = payload.exp;
+        const emailId = user.emailId;
+
+        const payload = req.jwtPayload;    
+        const {jwtToken} = req.cookies || {};
 
         const multi = redisclient.multi(); // create a transaction, if the set function runs successfully but expireAt fails that will create a problem for us
 
-        multi.set(`logout:jwtToken:user:${emailId}`, jwtToken);
-        multi.expireat(`logout:jwtToken:user:${emailId}`, exp);
 
-        await multi.exec();
+        multi.set(`logout:jwtToken:user:${emailId}`, jwtToken );
+        multi.expireat(`logout:jwtToken:user:${emailId}`, payload.exp);
+
+       const [val1, val3] =  await multi.exec();
         
+
+       console.log(val1, val3);
         res.clearCookie('jwtToken',{
             httpOnly: true
         });
@@ -157,22 +163,6 @@ export const logout = async (req, res) => {
 
     } catch (err) {
 
-        // check for jwt error like invalid or others to send 400 code 
-
-        if (err.name === 'TokenExpiredError') {
-           
-            res.clearCookie('jwtToken', { httpOnly: true });
-            return res.status(200).json({ success: true, message: 'Token expired, user logged out.' });
-        }
-
-        if (err.name === 'JsonWebTokenError') {
-            // The token is invalid (bad signature, etc.)
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token. Please log in again.'
-            });
-        }
-
         console.error('Error while loggin out', err);
 
         res.status(500).json({
@@ -182,6 +172,7 @@ export const logout = async (req, res) => {
 
     }
 }
+
 
 export const profile = async(req, res)=>{
 
