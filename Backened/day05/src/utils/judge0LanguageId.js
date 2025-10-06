@@ -1,0 +1,52 @@
+const latestLanguageIds = {
+  "Assembly": 45,
+  "Bash": 46,
+  "Basic": 47,
+  "C (Clang)": 110,
+  "C (GCC)": 103,
+  "C++ (Clang)": 76,
+  "C++ (GCC)": 105,
+  "Clojure": 86,
+  "C#": 51,
+  "COBOL": 77,
+  "Common Lisp": 55,
+  "Dart": 90,
+  "D": 56,
+  "Elixir": 57,
+  "Erlang": 58,
+  "Executable": 44,
+  "F#": 87,
+  "Fortran": 59,
+  "Go": 107,
+  "Groovy": 88,
+  "Haskell": 61,
+  "JavaFX": 96,
+  "Java": 91,
+  "JavaScript": 102,
+  "Kotlin": 111,
+  "Lua": 64,
+  "Multi-file program": 89,
+  "Objective-C": 79,
+  "OCaml": 65,
+  "Octave": 66,
+  "Pascal": 67,
+  "Perl": 85,
+  "PHP": 98,
+  "Plain Text": 43,
+  "Prolog": 69,
+  "Python": 109,
+  "R": 99,
+  "Ruby": 72,
+  "Rust": 108,
+  "Scala": 112,
+  "SQL": 82,
+  "Swift": 83,
+  "TypeScript": 101,
+  "Visual Basic.Net": 84
+};
+
+function getLanguageId(language){
+    return latestLanguageIds[language.toLowercase()];
+}
+
+export default getLanguageId;
