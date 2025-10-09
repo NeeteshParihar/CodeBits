@@ -15,14 +15,6 @@ app.use(express.json()); // middleware which converts json format to js object
 app.use(cookieParser()); // middleware which using a handler which parser cookie header and into object and assigns it to req.cookies
 
 
-
-app.use('/', (req, res)=>{
-    res.json({
-        success: true,
-        message: "hello bro"
-    })
-})
-
 const {success, message, err} =  await connectDatabase(mongodb_connection_url, database);
 
 if(success){

@@ -9,7 +9,9 @@ async function checkTestCases(refrenceSolution, visibleTestCases,
 
     const totalTestCases = [...visibleTestCases, ...hiddenTestCases];
 
-    const errors = [];
+    const errors = [ {
+        statusCode: 400
+    }];
 
     for (const { language, code } of refrenceSolution) {
 
@@ -27,14 +29,26 @@ async function checkTestCases(refrenceSolution, visibleTestCases,
         });
 
         // send the batch for submission
-        const tokenResponse = await submitBatch(submissions); // [ {token: "fkfng"}, {token: "skgnbkgj"}] 
+        const submissionResponse = await submitBatch(submissions); // [ {token: "fkfng"}, {token: "skgnbkgj"}] 
 
-        const tokens = tokenResponse.map(({ token }) => token);
+        if(!submissionResponse.success){
+           errors[0].statusCode = 500;
+           errors.push({
+            success: false,
+            message: "error while submitting the batch",
+            err: submissionResponse.err 
+           })
+           break;
+        }
+
+        const tokens = submissionResponse.tokenResponse.map(({ token }) => token);
         // fetch the batch using recieved tokens
         const { success, submissionResult, err } = await getBatchSubmission(tokens);
 
 
         if (!success) {
+
+            errors[0].statusCode = 500;
             errors.push({
                 success: false,
                 message: "Error while fetching batch submission",

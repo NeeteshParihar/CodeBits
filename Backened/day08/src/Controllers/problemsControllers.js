@@ -7,6 +7,8 @@ export const createProblem = async (req, res) => {
 
     try {
 
+
+
         const user = req.user;
 
         if (!user || user.role !== 'admin') {
@@ -46,9 +48,11 @@ export const createProblem = async (req, res) => {
 
         const errors = await checkTestCases(refrenceSolution, visibleTestCases);
 
-        if (errors.length > 0) {
+        if (errors.length > 1) {
 
-            return res.status(400).json({
+            const statusCode = errors[0].statusCode;          
+
+            return res.status(statusCode).json({
                 success: false,
                 errs: errors
             })
@@ -158,11 +162,35 @@ export const updateProblemById = async (req, res) => {
             })
         }
 
+        // check if the problem exist or not if not we can save the processing
+        const isExist = await problemModel.find({_id: id});
+
+        if(!isExist){
+            return res.status(404).json({
+                success: false, message: `problem with id ${id} does'nt exists`
+            })
+        }
+
         // the data is validated by the middleware
         const { title, description, difficultyLevel,
             tags, visibleTestCases,
             hiddenTestCases, startCode, refrenceSolution } = req.body;
-        const problemCreator = user._id; // the user which updating it    
+        const problemCreator = user._id; // the user which updating it  
+        
+
+        const errors = await checkTestCases(refrenceSolution, visibleTestCases, hiddenTestCases);
+
+       
+        if (errors.length > 1) {
+
+            const statusCode = errors[0].statusCode;         
+
+            return res.status(statusCode).json({
+                success: false,
+                errs: errors
+            })
+
+        }
 
         // this method finishes the task in one atomic unit 
         const updatedProblem = await problemModel.findByIdAndUpdate(id, {
@@ -170,6 +198,7 @@ export const updateProblemById = async (req, res) => {
             tags, visibleTestCases,
             hiddenTestCases, startCode, refrenceSolution
         }, { new: true, runValidators: true });
+
 
         // it will return null if no id is found  or it will return updated object if id matched dure ot new: true
 

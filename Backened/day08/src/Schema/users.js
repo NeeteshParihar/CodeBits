@@ -6,7 +6,7 @@ const userSchema = new Schema({
         type: String,
         minLength: 1,
         maxLength: 20,
-        require: true
+        required: true
     },
     lastName: {
         type: String,
@@ -43,6 +43,6 @@ const userSchema = new Schema({
     timestamps: true
 });
 
-const users = model('users', userSchema);
+const userModel = model('user', userSchema);
 
-export default users;
+export default userModel;
