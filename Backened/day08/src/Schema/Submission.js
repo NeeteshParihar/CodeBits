@@ -38,8 +38,7 @@ const submissionSchema = new Schema({
     },
     status: {
         type: statusSchema,
-        required: true,
-               
+        required: true,               
     },
     runtime: {
         type:Number,

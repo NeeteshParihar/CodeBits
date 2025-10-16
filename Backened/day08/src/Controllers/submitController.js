@@ -7,7 +7,6 @@ import checkTestCases from '../utils/testCaseAnalysis.js';
 
 
 
-
 export const submitCode = async (req, res) => {
 
     try {
@@ -19,22 +18,24 @@ export const submitCode = async (req, res) => {
 
         if (!isValidObjectId(problemId)) {
             return res.status(400).json({
-                success: false, message: `${id} is not a valid objectId`
+                success: false, message: `${problemId} is not a valid objectId`
             })
         }
 
 
+        const languageId = getLanguageId(language)
 
-        if (!code || !language) {
+        if (!code || !languageId) {
             return res.status(400).json({
-                success: false, message: `code: ${code}, langauge: ${language} are not valid`
+                success: false, message: `Invalid: ${(!code) ? code : ""}, ${(!languageId) ? language : ""}`
             })
         }
+
 
         // save , run with polling and then i have to update it
         // the status is pending still
         const newSubmission = await submissionModel.create({
-            userId, problemId, code, language, status: { id:1, description: "pending" }
+            userId, problemId, code, language, status: { id: 1, description: "pending" }
         })
 
         // get the hidden test cases from problem,
@@ -44,22 +45,23 @@ export const submitCode = async (req, res) => {
         const queryStr = includedFields.join(' ');
         const testCases = await problemModel.findById(problemId).select(queryStr);
 
-        const languageId = getLanguageId(language);
 
-        if (!language) {
-            return res.status(400).json({
-                success: false,
-                message: "provided langauge is not supported, try to submit in available languages"
-            })
-        }
 
         const solution = [{ language, code }];
-        const { internalServerError, results } = await checkTestCases(solution, testCases.visibleTestCases, testCases.hiddenTestCases);
+        const { visibleTestCases, hiddenTestCases } = testCases;
+        const { internalServerError, results } = await checkTestCases(solution, visibleTestCases, hiddenTestCases);
 
 
         if (internalServerError) {
 
-            await submissionModel.updateOne({ _id: newSubmission._id }, { $set: { "status.description": "internalServerError" } });
+            await submissionModel.updateOne({ _id: newSubmission._id },
+                {
+                    $set: {
+                        status:
+                            { id: -1, description: "internalServerError" }
+                    }
+                });
+
 
             return res.status(500).json({
                 success: false, message: "Internal server error", errMsg: internalServerError.message
@@ -68,7 +70,7 @@ export const submitCode = async (req, res) => {
 
 
         const errors = [];
-        const totalTestCases = testCases.visibleTestCases.length + testCases.hiddenTestCases.length;
+        const totalTestCases = visibleTestCases.length + hiddenTestCases.length;
 
         let maxRunTime = 0, maxMemory = 0;
         let testCasesPassed = 0
@@ -76,6 +78,8 @@ export const submitCode = async (req, res) => {
         results.forEach((testResult, index) => {
 
             index = index % totalTestCases;
+
+            const {memory, time } = testResult;
 
             maxMemory = Math.max(maxMemory, memory || 0);
             maxRunTime = Math.max(maxRunTime, time || 0);
@@ -96,7 +100,7 @@ export const submitCode = async (req, res) => {
                     compileOutput: testResult.compile_output,
 
                 })
-            }else{
+            } else {
                 testCasesPassed++;
             }
         })
@@ -110,7 +114,7 @@ export const submitCode = async (req, res) => {
                 _id: newSubmission._id
             }, {
                 $set: {
-                    status: testResult.status,                  
+                    status: testResult.status,
                     testCasesPassed: testCasesPassed,
                     totalTestCases: totalTestCases,
                     errorMessage: testResult.status.description
@@ -132,7 +136,7 @@ export const submitCode = async (req, res) => {
                 status: results.status,
                 runtime: maxRunTime,
                 memory: maxMemory,
-                testCasesPassed: totalTestCases,
+                testCasesPassed: testCasesPassed,
                 totalTestCases: totalTestCases
             }
         })
@@ -145,7 +149,9 @@ export const submitCode = async (req, res) => {
             totalTestCases: totalTestCases,
             desciption: "ACCEPTED!",
             code,
-            language
+            language,
+            memory: maxMemory,
+            runtime: maxRunTime
         })
 
 
