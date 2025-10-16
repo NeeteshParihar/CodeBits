@@ -8,7 +8,6 @@ export const createProblem = async (req, res) => {
     try {
 
 
-
         const user = req.user;
 
         if (!user || user.role !== 'admin') {
@@ -46,15 +45,44 @@ export const createProblem = async (req, res) => {
         // https://ce.judge0.com/#statuses-and-languages-status-get // understand status_id from here
 
 
-        const errors = await checkTestCases(refrenceSolution, visibleTestCases);
+        const { internalServerError, results } = await checkTestCases(refrenceSolution, visibleTestCases, hiddenTestCases);
+       
+        if (internalServerError) {
+            return res.status(500).json({
+                success: false, message: "Internal server error", errMsg: internalServerError.message
+            })
+        }
 
-        if (errors.length > 1) {
+        const errors =  [];
+        const totalTestCases  = visibleTestCases.length + hiddenTestCases.length;
+       
+         results.forEach((testResult, index)=>{
 
-            const statusCode = errors[0].statusCode;          
+            index = index % totalTestCases;
 
-            return res.status(statusCode).json({
-                success: false,
-                errs: errors
+            if(testResult.status.id < 3 || testResult.status.id > 3){
+
+                errors.push({
+                    status: testResult.status,
+                     TestCaseEror:{
+                        errorIn: (index >= visibleTestCases.length)? "hiddenTestCase": "visibleTestCase",
+                        index: (index >= visibleTestCases.length)? index - visibleTestCases.length : index 
+                    },
+                    languageId: testResult.language_id,
+                    code: testResult.source_code,
+                    stdin: testResult.stdin,
+                    stdout: testResult.stdout,
+                    expectedOutput: testResult.expected_output,
+                    compileOutput : testResult.compile_output,                   
+
+                })
+            }
+        })
+
+        if(errors.length > 1){
+            return res.status(400).json({
+                success: false, message: "NOT SUBMITTED!",
+                err: errors
             })
         }
 
@@ -79,7 +107,7 @@ export const createProblem = async (req, res) => {
 
         res.status(500).json({
             success: false,
-            message: "problem is not submitted successfully",
+            message: "Internal server error, problem is not submitted",
             err: err
         })
     }
@@ -142,7 +170,6 @@ export const deleteProblemById = async (req, res) => {
 export const updateProblemById = async (req, res) => {
     try {
 
-
         const user = req.user;
 
         if (!user || user.role !== 'admin') {
@@ -163,9 +190,9 @@ export const updateProblemById = async (req, res) => {
         }
 
         // check if the problem exist or not if not we can save the processing
-        const isExist = await problemModel.find({_id: id});
+        const isExist = await problemModel.find({ _id: id });
 
-        if(!isExist){
+        if (!isExist) {
             return res.status(404).json({
                 success: false, message: `problem with id ${id} does'nt exists`
             })
@@ -176,21 +203,52 @@ export const updateProblemById = async (req, res) => {
             tags, visibleTestCases,
             hiddenTestCases, startCode, refrenceSolution } = req.body;
         const problemCreator = user._id; // the user which updating it  
-        
 
-        const errors = await checkTestCases(refrenceSolution, visibleTestCases, hiddenTestCases);
 
-       
-        if (errors.length > 1) {
+       const { internalServerError, results } = await checkTestCases(refrenceSolution, visibleTestCases, hiddenTestCases);
 
-            const statusCode = errors[0].statusCode;         
-
-            return res.status(statusCode).json({
-                success: false,
-                errs: errors
+        if (internalServerError) {
+            return res.status(500).json({
+                success: false, message: "Internal server error", errMsg: internalServerError.message
             })
-
         }
+
+
+        const errors =  [];
+        const totalTestCases  = visibleTestCases.length + hiddenTestCases.length;
+       
+         results.forEach((testResult, index)=>{
+
+            index = index % totalTestCases; // ...., ...., ..... --> different langauge soln, so we normalize the index  for total testCases means "...."
+
+            if(testResult.status.id < 3 || testResult.status.id > 3){
+
+                errors.push({
+                    status: testResult.status,
+                     TestCaseEror:{
+                        errorIn: (index >= visibleTestCases.length)? "hiddenTestCase": "visibleTestCase",
+                        index: (index >= visibleTestCases.length)? index - visibleTestCases.length : index 
+                    },
+                    languageId: testResult.language_id,
+                    code: testResult.source_code,
+                    stdin: testResult.stdin,
+                    stdout: testResult.stdout,
+                    expectedOutput: testResult.expected_output,
+                    compileOutput : testResult.compile_output,                   
+
+                })
+            }
+        })
+
+        if(errors.length > 1){
+            return res.status(400).json({
+                success: false, message: "NOT SUBMITTED!",
+                err: errors
+            })
+        }
+
+        // if all the testCases runs successfully
+        // create the new problem 
 
         // this method finishes the task in one atomic unit 
         const updatedProblem = await problemModel.findByIdAndUpdate(id, {
@@ -240,9 +298,24 @@ export const getProblemById = async (req, res) => {
             })
         }
 
-        const problem = await problemModel.findById(id); // return null or object
+        // const problem = await problemModel.findById(id, {hiddenTestCases: 0, problemCreator: 0, refrenceSolution: 0}); // return null or object
 
-        if(!problem){
+        // there is another way of doing this 
+        // if i want to avoid a field then add '-' as prefix to it, and 
+        // if we passes a empty string it will just give all the fields
+        // we we passes only -field it will give object without them
+        // if we passes field with no-sign it will give only those fields
+
+        // const excludingFields = [ /* 'visibleTestCases.explanation' */, 'hiddenTestCases', "problemCreator", "refrenceSolution"];
+        // const selectStr = excludingFields.map((field)=> `-${field}`).join(' ');
+
+        // //  we gets the string as : ' -visibleTestCases.explanation -hiddenTestCases -problemCreator -refrenceSolution',
+        // // if we want to avoid something inside a nested Object for example visibelTestCases.explanation --> -visibelTestCases.explanation
+
+        const includedFields = ['_id', 'title', 'description', 'difficultyLevel', 'visibleTestCases', 'startCode', 'tags'];
+        const problem = await problemModel.findById(id).select(includedFields.join(' '));
+
+        if (!problem) {
             return res.status(404).json({
                 success: false, message: `Problem not found`
             })
@@ -278,18 +351,24 @@ export const getAllProblems = async (req, res) => {
         // means skip = 0*10 = 0 and give ne next problems
         // when page = 1, skip = 1*10 and give me next 10 objects or probelms 
 
+        let { page } = req.query;
 
-        let {page} = req.query;
+        if (!page && page != 0) page = 0;
 
-        const previousCount = page*10; // page = 0, 1 ,2 ...
+        const previousCount = page * 10; // page = 0, 1 ,2 ...
 
-        const problems = await problemModel.find({}, {hiddenTestCases: 0, problemCreator: 0}).skip(previousCount).limit(10);  
+        const includedFields = ['_id', 'title', 'difficultyLevel', 'tags']; // we just need these information to show, when the user clicks in we can again fetch the particular id
+
+
+        // const problems = await problemModel.find({}, {hiddenTestCases: false, problemCreator: false, refrenceSolution: false}).skip(previousCount).limit(10);  
+
+        const problems = await problemModel.find({}).select(includedFields.join(' ')).skip(previousCount).limit(10);
 
         res.status(200).json({
             success: true, message: "fetched all problems",
             problems
         })
-       
+
 
     } catch (err) {
 

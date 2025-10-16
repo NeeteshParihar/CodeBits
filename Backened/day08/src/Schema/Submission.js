@@ -1,6 +1,20 @@
 import mongoose, { Schema, model } from "mongoose";
 // we will define the submission shcema when user actaully submit the problem after solving it 
 
+
+const statusSchema = new Schema({
+    id: {
+        type: Number,
+        required: true,
+    },
+    description: {
+        type: String,
+        required: true,
+        default: "pending"
+    },
+
+}, { _id: false })
+
 const submissionSchema = new Schema({
 
     userId: {
@@ -23,9 +37,9 @@ const submissionSchema = new Schema({
         enum: ['python', 'javascript', 'c', 'c++', 'java', 'kotlin', 'rust', 'typescript', 'go']
     },
     status: {
-        type: String,
-        enum: ['pending', 'accecpted', 'wrong', 'error'],
-        default: 'pending'
+        type: statusSchema,
+        required: true,
+               
     },
     runtime: {
         type:Number,

@@ -4,6 +4,7 @@ import connectToMongoDb from './Config_db/connectDb.js';
 import cookieParser from 'cookie-parser';
 import authRouter from './Routes/userAuth.js';
 import problemsRouter from './Routes/problemsRouter.js';
+import submitRouter from './Routes/submitRoute.js';
 import redisclient, {connectToRedis} from './Config_db/redis.js';
 
 dotenv.config({ path: './.env' });
@@ -24,6 +25,7 @@ app.use(cookieParser()); // middleware which using a handler which parser cookie
 
 app.use('/auth', authRouter);
 app.use('/problem', problemsRouter);
+app.use('/submission', submitRouter);
 
 
 app.use('/', (req, res)=>{

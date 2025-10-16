@@ -1,6 +1,12 @@
 
-const {page} = {};
 
-if(!page) page = 0;
+const a = 1;
 
-console.log(page);
+try{
+
+    a = 5;
+
+}catch(err){
+
+    console.log(err);
+}

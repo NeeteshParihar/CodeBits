@@ -39,13 +39,12 @@ export async function submitBatch(submissions) {
     })
 
 
-    return { success: true, tokenResponse:response.data};
+    return { internalServerError: null, tokenResponse:response.data};
 
   } catch (err) {
     console.log('got erro while batch submission', err);
     return {
-      success: false,
-      err
+      internalServerError: err,
     };
   }
 }
@@ -74,6 +73,7 @@ async function getBatchSubmission_util(tokens) {
 
 
 export async function getBatchSubmission(tokens) {
+
 
 
   let submissionResult
@@ -117,17 +117,19 @@ export async function getBatchSubmission(tokens) {
     }
 
 
-    return {
-      success: true,
-      submissionResult
 
+    return {
+      internalServerError: null,
+      results: submissionResult
     }
+
 
   } catch (err) { 
 
+
     return {
-      success: false,
-      err
+      internalServerError: err,
+      results: []
     }
   }
 
