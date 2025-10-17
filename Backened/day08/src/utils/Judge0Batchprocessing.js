@@ -12,8 +12,6 @@ const host = process.env['host'];
 
 export async function submitBatch(submissions) {
 
-
-
   const options = {
     method: 'POST',
     url: 'https://judge0-ce.p.rapidapi.com/submissions/batch',

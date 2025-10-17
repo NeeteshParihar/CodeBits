@@ -1,5 +1,7 @@
 
 import Validator from 'validator';
+import getLanguageId from './judge0LanguageId.js';
+import { isValidObjectId } from './validateMongoObjectId.js';
 
 export const userDataValidationRule = {
     'emailId': {
@@ -93,3 +95,41 @@ export const problemDataValidationRule = {
   }
 };
 
+class submissionClass{
+  
+  constructor(field, errMessage, validator){
+    this.field = field;
+    this.validator = validator;
+    this.errMessage = errMessage 
+  }
+
+}
+
+export const submissionValidationRule = {
+  language:{
+    language: null,
+    validator: function(lang){
+      this.language = lang;
+      const id = getLanguageId(lang);
+      return id; // if there, is id it will be a number else it will be undefined
+    },
+    errMessage: function(){ return  `${this.language} is not a valid or supported language` }
+  },
+
+  code: {
+     code: null,
+     validator: function(code){
+      this.code = code;
+      return code.trim() != "";
+    },
+    errMessage: function(){ return  `${this.code} Should not be empty` } 
+  },
+   problemId: {
+     problemId: null,
+     validator: function(id){
+      this.problemId = id;
+      return isValidObjectId(id);      
+    },
+    errMessage: function(){ return  `${this.problemId} is not a valid problem id` } 
+  },
+}

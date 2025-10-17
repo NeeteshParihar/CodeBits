@@ -1,9 +1,8 @@
 
 import submissionModel from "../Schema/Submission.js";
 import problemModel from '../Schema/problems.js';
-import { isValidObjectId } from '../utils/validateMongoObjectId.js';
-import getLanguageId from "../utils/judge0LanguageId.js";
 import checkTestCases from '../utils/testCaseAnalysis.js';
+
 
 
 
@@ -11,75 +10,44 @@ export const submitCode = async (req, res) => {
 
     try {
 
-        const userId = req.user._id;
-        const problemId = req.params.id; // we need to verify this
+        const { internalServerErrorVisibleTestCases,
+            internalServerErrorHiddenTestCases,
+            SubmissionId, visibleTestCaseResults,
+            hiddenTestCaseResults, visibleTestCasesLength, hiddenTestCasesLength } = req;
 
-        const { code, language } = req.body;
+        if (internalServerErrorVisibleTestCases || internalServerErrorHiddenTestCases) {
 
-        if (!isValidObjectId(problemId)) {
-            return res.status(400).json({
-                success: false, message: `${problemId} is not a valid objectId`
+            // update the submission record
+            await submissionModel.updateOne({ _id: SubmissionId }, {
+                $set: { status: { id: -1, description: "Internal Server Error" } }
             })
-        }
 
-
-        const languageId = getLanguageId(language)
-
-        if (!code || !languageId) {
-            return res.status(400).json({
-                success: false, message: `Invalid: ${(!code) ? code : ""}, ${(!languageId) ? language : ""}`
-            })
-        }
-
-
-        // save , run with polling and then i have to update it
-        // the status is pending still
-        const newSubmission = await submissionModel.create({
-            userId, problemId, code, language, status: { id: 1, description: "pending" }
-        })
-
-        // get the hidden test cases from problem,
-        // run the test cases against the code 
-
-        const includedFields = ['visibleTestCases', 'hiddenTestCases'];
-        const queryStr = includedFields.join(' ');
-        const testCases = await problemModel.findById(problemId).select(queryStr);
-
-
-
-        const solution = [{ language, code }];
-        const { visibleTestCases, hiddenTestCases } = testCases;
-        const { internalServerError, results } = await checkTestCases(solution, visibleTestCases, hiddenTestCases);
-
-
-        if (internalServerError) {
-
-            await submissionModel.updateOne({ _id: newSubmission._id },
-                {
-                    $set: {
-                        status:
-                            { id: -1, description: "internalServerError" }
-                    }
-                });
-
+            console.error('error while');
+            console.error(internalServerErrorHiddenTestCases);
+            console.error(internalServerErrorVisibleTestCases);
 
             return res.status(500).json({
-                success: false, message: "Internal server error", errMsg: internalServerError.message
+                success: false, message: 'Internal server error'
             })
-        }
+
+        }   
+
 
 
         const errors = [];
-        const totalTestCases = visibleTestCases.length + hiddenTestCases.length;
+
+        const totalTestCases = visibleTestCasesLength+hiddenTestCasesLength;
 
         let maxRunTime = 0, maxMemory = 0;
         let testCasesPassed = 0
+
+        const results = [...visibleTestCaseResults, ...hiddenTestCaseResults];
 
         results.forEach((testResult, index) => {
 
             index = index % totalTestCases;
 
-            const {memory, time } = testResult;
+            const { memory, time } = testResult;
 
             maxMemory = Math.max(maxMemory, memory || 0);
             maxRunTime = Math.max(maxRunTime, time || 0);
@@ -89,8 +57,8 @@ export const submitCode = async (req, res) => {
                 errors.push({
                     status: testResult.status,
                     TestCaseEror: {
-                        errorIn: (index >= visibleTestCases.length) ? "hiddenTestCase" : "visibleTestCase",
-                        index: (index >= visibleTestCases.length) ? index - visibleTestCases.length : index
+                        errorIn: (index >= visibleTestCasesLength) ? "hiddenTestCase" : "visibleTestCase",
+                        index: (index >= visibleTestCasesLength) ? index - visibleTestCasesLength : index
                     },
                     languageId: testResult.language_id,
                     code: testResult.source_code,
@@ -110,8 +78,11 @@ export const submitCode = async (req, res) => {
 
             const testResult = errors[0];
 
+            console.log(testResult);
+
+
             await submissionModel.updateOne({
-                _id: newSubmission._id
+                _id: SubmissionId
             }, {
                 $set: {
                     status: testResult.status,
@@ -129,11 +100,15 @@ export const submitCode = async (req, res) => {
 
         }
 
+
+
+
+
         await submissionModel.updateOne({
-            _id: newSubmission._id
+            _id: SubmissionId
         }, {
             $set: {
-                status: results.status,
+                status: results[0].status,
                 runtime: maxRunTime,
                 memory: maxMemory,
                 testCasesPassed: testCasesPassed,
