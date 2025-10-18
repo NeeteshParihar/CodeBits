@@ -32,7 +32,6 @@ async function checkTestCases(refrenceSolution, visibleTestCases,
                 }
             });
 
-
             // send the batch for submission
             const { internalServerError: err, tokenResponse } = await submitBatch(submissions); // [ {token: "fkfng"}, {token: "skgnbkgj"}] 
 
@@ -40,6 +39,7 @@ async function checkTestCases(refrenceSolution, visibleTestCases,
                 ans.internalServerError = err;
                 break;
             }
+
 
 
             const tokens = tokenResponse.map(({ token }) => token);
@@ -60,7 +60,10 @@ async function checkTestCases(refrenceSolution, visibleTestCases,
                     stdin: getUtf8FromBase64(testResult.stdin),
                     stdout: getUtf8FromBase64(testResult.stdout),
                     expected_output: getUtf8FromBase64(testResult.expected_output),
-                    compile_output: getUtf8FromBase64(testResult.compile_output)
+                    compile_output: getUtf8FromBase64(testResult.compile_output),
+                    message: getUtf8FromBase64(testResult.message),
+                    stderr: getUtf8FromBase64(testResult.stderr),
+
                 }
             })
 

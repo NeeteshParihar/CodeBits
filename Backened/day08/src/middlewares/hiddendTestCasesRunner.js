@@ -19,11 +19,14 @@ async function hiddenTestCases(req, res, next) {
         const solutions = [{ language, code }];
         const { internalServerError, results } = await checkTestCases(solutions,  [], hiddenTestCases);
 
-        req.internalServerErrorHiddenTestCases = internalServerError;
+        if(internalServerError){
+            return res.status(500).json({
+                success: false, message: internalServerError.message,
+                err: internalServerError,
+                errorIn: "hiddenTestCaseMiddleWare"
+            })
+        }
         req.hiddenTestCaseResults = results;
-        req.hiddenTestCasesLength = hiddenTestCases.length;
-
-
         next();
 
     } catch (err) {

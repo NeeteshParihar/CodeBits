@@ -1,4 +1,6 @@
 import axios from "axios";
+import dotenv from 'dotenv';
+
 
 const originalString = `#include <iostream>
 using namespace std;
@@ -24,6 +26,9 @@ int main() {
     return 0;
 }`;
 
+dotenv.config({path: './judge0.env' });
+const key = process.env['judge_key'];
+const host = process.env['host'];
 
 
 const options = {
@@ -34,8 +39,8 @@ const options = {
         fields: '*'
     },
     headers: {
-        'x-rapidapi-key': '84a4e77199mshc9b598d7896086dp1f7d4fjsn6733e170f3c9',
-        'x-rapidapi-host': 'judge0-ce.p.rapidapi.com',
+        'x-rapidapi-key': key,
+        'x-rapidapi-host': host,
         'Content-Type': 'application/json'
     },
     data: {
@@ -63,13 +68,13 @@ async function fetchData() {
 
 const optionsForGet = {
     method: 'GET',
-    url: `https://judge0-ce.p.rapidapi.com/submissions/${'99c7eee0-05db-4869-85ba-49d285d208aa'}`,
+    url: `https://judge0-ce.p.rapidapi.com/submissions/${'4f7425f4-deb7-4488-b2b8-3ba8cd029cd8'}`,
     params: {
         fields: '*'
     },
     headers: {
-        'x-rapidapi-key': '84a4e77199mshc9b598d7896086dp1f7d4fjsn6733e170f3c9',
-        'x-rapidapi-host': 'judge0-ce.p.rapidapi.com'
+        'x-rapidapi-key': key,
+        'x-rapidapi-host': host
     }
 };
 

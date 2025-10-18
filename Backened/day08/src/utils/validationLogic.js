@@ -95,19 +95,11 @@ export const problemDataValidationRule = {
   }
 };
 
-class submissionClass{
-  
-  constructor(field, errMessage, validator){
-    this.field = field;
-    this.validator = validator;
-    this.errMessage = errMessage 
-  }
 
-}
 
 export const submissionValidationRule = {
   language:{
-    language: null,
+    language: null, 
     validator: function(lang){
       this.language = lang;
       const id = getLanguageId(lang);

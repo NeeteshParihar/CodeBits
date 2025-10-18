@@ -1,6 +1,6 @@
 import express from "express";
 import { checkUserAuthentication } from "../middlewares/userAuthentication.js";
-import { submitCode } from "../Controllers/submitController.js";
+import { submitCode, runCode } from "../Controllers/submitController.js";
 import { submissionDataValidation } from "../utils/submissionDataValidation.js";
 import visibleTestCases from '../middlewares/visibleTestCasesRunner.js';
 import hiddenTestCases from '../middlewares/hiddendTestCasesRunner.js';
@@ -18,10 +18,16 @@ const submitRouter = express.Router();
 // we can define a middleware called run which only runs the users solution of a particular id on visible test cases or hidden testCases 
 
 // we will send the data that is needed to save the submission, but before that we need to run the code 
+
+submitRouter.use(checkUserAuthentication);
+
 submitRouter.post('/submit/:problemId',
-    checkUserAuthentication, submissionDataValidation(),
+     submissionDataValidation(),
     checkProblemInDb, saveSubmission,
     visibleTestCases, hiddenTestCases, submitCode);
+
+submitRouter.post('/run/:problemId', submissionDataValidation(), visibleTestCases, runCode)    
+
 
 export default submitRouter;
 

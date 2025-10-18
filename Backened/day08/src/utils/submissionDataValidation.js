@@ -34,8 +34,6 @@ export function submissionDataValidation(mandatoryField = Object.keys(submission
 
                 if (data.hasOwnProperty(key)) {
 
-                    console.log(key);
-
                     const validationObj = submissionValidationRule[key];
 
                     if (!validationObj.validator(data[key])) {

@@ -1,56 +1,35 @@
 
+import { model } from "mongoose";
 import submissionModel from "../Schema/Submission.js";
 import problemModel from '../Schema/problems.js';
 import checkTestCases from '../utils/testCaseAnalysis.js';
-
-
 
 
 export const submitCode = async (req, res) => {
 
     try {
 
-        const { internalServerErrorVisibleTestCases,
-            internalServerErrorHiddenTestCases,
-            SubmissionId, visibleTestCaseResults,
-            hiddenTestCaseResults, visibleTestCasesLength, hiddenTestCasesLength } = req;
+        const {
+            submissionId, visibleTestCaseResults,
+            hiddenTestCaseResults } = req;
 
-        if (internalServerErrorVisibleTestCases || internalServerErrorHiddenTestCases) {
+        const visibleTestCasesLength = visibleTestCaseResults.length;
+        const hiddenTestCasesLength = hiddenTestCaseResults.length;
 
-            // update the submission record
-            await submissionModel.updateOne({ _id: SubmissionId }, {
-                $set: { status: { id: -1, description: "Internal Server Error" } }
-            })
-
-            console.error('error while');
-            console.error(internalServerErrorHiddenTestCases);
-            console.error(internalServerErrorVisibleTestCases);
-
-            return res.status(500).json({
-                success: false, message: 'Internal server error'
-            })
-
-        }   
-
-
+        const { language, code } = req.body;
 
         const errors = [];
 
-        const totalTestCases = visibleTestCasesLength+hiddenTestCasesLength;
+        const totalTestCases = visibleTestCasesLength + hiddenTestCasesLength;
 
         let maxRunTime = 0, maxMemory = 0;
         let testCasesPassed = 0
 
         const results = [...visibleTestCaseResults, ...hiddenTestCaseResults];
 
+
         results.forEach((testResult, index) => {
 
-            index = index % totalTestCases;
-
-            const { memory, time } = testResult;
-
-            maxMemory = Math.max(maxMemory, memory || 0);
-            maxRunTime = Math.max(maxRunTime, time || 0);
 
             if (testResult.status.id < 3 || testResult.status.id > 3) {
 
@@ -66,23 +45,29 @@ export const submitCode = async (req, res) => {
                     stdout: testResult.stdout,
                     expectedOutput: testResult.expected_output,
                     compileOutput: testResult.compile_output,
-
+                    stderr: testResult.stderr,
+                    message: testResult.message
                 })
             } else {
-                testCasesPassed++;
+                testCasesPassed++;               
             }
+
+            const { memory, time } = testResult;          
+
+
+            maxMemory = Math.max(maxMemory, Number(memory) || 0); // inkbs
+            maxRunTime += Number(time*1000) || 0;  // in milliseconds
         })
+
+
 
 
         if (errors.length > 0) {
 
             const testResult = errors[0];
 
-            console.log(testResult);
-
-
             await submissionModel.updateOne({
-                _id: SubmissionId
+                _id: submissionId
             }, {
                 $set: {
                     status: testResult.status,
@@ -90,22 +75,29 @@ export const submitCode = async (req, res) => {
                     totalTestCases: totalTestCases,
                     errorMessage: testResult.status.description
                 }
-            })
+            }, {runValidators: true})
 
 
             return res.status(201).json({
                 success: false, message: "NOT ACCEPTED!",
-                result: testResult
+                result: {
+                    status: testResult.status,
+                    testCasesPassed: testCasesPassed,
+                    totalTestCases: totalTestCases,
+                    compileOutput: testResult.compileOutput,
+                    stderr: testResult.stderr,
+                    message: testResult.message                    
+                }
             })
 
         }
 
 
 
-
+        console.log(maxRunTime, typeof maxRunTime);
 
         await submissionModel.updateOne({
-            _id: SubmissionId
+            _id: submissionId
         }, {
             $set: {
                 status: results[0].status,
@@ -114,17 +106,22 @@ export const submitCode = async (req, res) => {
                 testCasesPassed: testCasesPassed,
                 totalTestCases: totalTestCases
             }
-        })
+        }, {runValidators: true});
+
+
+        console.log("making the results");
 
 
         res.status(201).json({
 
             success: true,
+            status: results[0].status || {
+                id: 3,
+                description: "Accepted"
+            },
             testCasesPassed: totalTestCases,
             totalTestCases: totalTestCases,
-            desciption: "ACCEPTED!",
-            code,
-            language,
+            language, code,
             memory: maxMemory,
             runtime: maxRunTime
         })
@@ -134,9 +131,44 @@ export const submitCode = async (req, res) => {
 
         return res.status(500).json({
             success: false, message: "sorry for inconvieniece, There was an internal server error!",
-            err: err.message
+            err: err.message,
+            errorIn: "submitController/submitCode"
         })
     }
 
+}
+
+export const runCode = async (req, res) => {
+    try {
+
+        const results= req.visibleTestCaseResults ;
+    
+        const modifiedResult = results.map((testResult) => {
+
+            return {
+                status: testResult.status,
+                stdin: testResult.stdin,
+                stdout: testResult.stdout,
+                expectedOutput: testResult.expected_output,
+                compileOutput: testResult.compile_output,
+                stderr: testResult.stderr,
+                message: testResult.message
+            }
+        })
+
+
+        res.status(200).json({
+            success: true,
+            results: modifiedResult
+        })
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false, message: err.messsage, errorIn: 'submitController/runCode',
+
+            err: err
+        })
+    }
 }
 

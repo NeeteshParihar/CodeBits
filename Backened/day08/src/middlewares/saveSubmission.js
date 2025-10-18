@@ -9,11 +9,15 @@ import submissionModel from "../Schema/Submission.js";
 
         // save the submission 
 
+      
+
         const newSubmission = await submissionModel.create({
             userId, problemId, code, language, status: { id: 1, description: "pending" }
         });
 
-        req.SubmissionId = newSubmission._id;
+     
+
+        req.submissionId = newSubmission._id;
 
         next();
       

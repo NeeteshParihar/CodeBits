@@ -4,5 +4,3 @@ export function isValidObjectId(id){
     if(!id) return false;
     return mongoose.Types.ObjectId.isValid(id);
 }
-
-console.log(mongoose.Types.ObjectId.isValid(NaN));

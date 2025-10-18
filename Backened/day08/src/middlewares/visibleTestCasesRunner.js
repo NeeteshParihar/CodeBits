@@ -14,15 +14,18 @@ async function visibleTestCases(req, res, next) {
 
         const visibleTestCases = problem.visibleTestCases;
 
-
         const solutions = [{ language, code }];
         const { internalServerError, results } = await checkTestCases(solutions, visibleTestCases);
 
-        req.internalServerErrorVisibleTestCases =  internalServerError; // null or error 
+        if(internalServerError){
+            return res.status(500).json({
+                success: false, message: internalServerError.message,
+                err: internalServerError,
+                errorIn: "middlewares/visibleTestCaseRunner.js!"
+            })
+        }
+
         req.visibleTestCaseResults = results;
-        req.visibleTestCasesLength = visibleTestCases.length;
-
-
         next();
 
     } catch (err) {
